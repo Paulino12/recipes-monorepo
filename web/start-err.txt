@@ -22,3 +22,4 @@ Error: Missing INTERNAL_API_ORIGIN
     at async i (C:\Users\pauli\Documents\webdev\ios apps\recipes-platform\recipe-platform-monorepo\web\.next\server\chunks\ssr\[root-of-the-server]__1afff0a9._.js:1:2363) {
   digest: '4200911907'
 }
+^C

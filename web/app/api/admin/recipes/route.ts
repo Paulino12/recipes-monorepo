@@ -4,7 +4,7 @@ import {
   ADMIN_AUDIENCES,
   type AdminAudience,
   listAdminRecipes,
-  setRecipeVisibility,
+  setRecipesVisibility,
 } from "@/lib/api/adminRecipes";
 import { requireApiKey } from "@/lib/api/auth";
 
@@ -36,6 +36,7 @@ export async function GET(req: NextRequest) {
 
 type PatchBody = {
   id?: unknown;
+  ids?: unknown;
   audience?: unknown;
   value?: unknown;
 };
@@ -52,9 +53,12 @@ export async function PATCH(req: NextRequest) {
   }
 
   const id = typeof body.id === "string" ? body.id.trim() : "";
-  if (!id) return NextResponse.json({ error: "id is required" }, { status: 400 });
-
-  if (id.startsWith("drafts.")) {
+  const ids = Array.isArray(body.ids)
+    ? body.ids.filter((value): value is string => typeof value === "string").map((value) => value.trim())
+    : [];
+  const targetIds = [...new Set([id, ...ids].filter(Boolean))];
+  if (!targetIds.length) return NextResponse.json({ error: "id or ids is required" }, { status: 400 });
+  if (targetIds.some((targetId) => targetId.startsWith("drafts."))) {
     return NextResponse.json({ error: "draft ids are not supported" }, { status: 400 });
   }
 
@@ -73,10 +77,14 @@ export async function PATCH(req: NextRequest) {
   const validatedAudience = audience as AdminAudience;
 
   try {
-    const updated = await setRecipeVisibility(id, validatedAudience, body.value);
-    if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const updated = await setRecipesVisibility(targetIds, validatedAudience, body.value);
+    if (!updated.updatedIds.length) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    return NextResponse.json({ ok: true, ...updated });
+    return NextResponse.json({
+      ok: true,
+      updatedCount: updated.updatedIds.length,
+      relatedCount: updated.relatedIds.length,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to update recipe visibility";
     const status = message.toLowerCase().includes("permission") ? 403 : 500;

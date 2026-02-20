@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import { Input } from "@/components/ui/input";
 import { getInternalApiOrigin } from "@/lib/api/origin";
+import { buildCompactPagination } from "@/lib/pagination";
 import { getForwardAuthHeaders, getServerAccessSession } from "@/lib/api/serverSession";
 import {
   buildHrefWithQuery,
@@ -156,6 +157,7 @@ export default async function OwnerSubscribersPage({
   const from = total === 0 ? 0 : (data.pagination.page - 1) * data.pagination.page_size + 1;
   const to = total === 0 ? 0 : Math.min(data.pagination.page * data.pagination.page_size, total);
   const totalPages = Math.max(1, Math.ceil(total / data.pagination.page_size));
+  const pageTokens = buildCompactPagination(totalPages, data.pagination.page);
 
   return (
     <main className="mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6">
@@ -353,7 +355,7 @@ export default async function OwnerSubscribersPage({
           Page <span className="font-medium text-foreground">{data.pagination.page}</span> of{" "}
           <span className="font-medium text-foreground">{totalPages}</span>
         </p>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {data.pagination.page > 1 ? (
             <Link
               href={buildHref({
@@ -377,6 +379,40 @@ export default async function OwnerSubscribersPage({
               Previous
             </span>
           )}
+
+          <div className="flex items-center gap-1">
+            {pageTokens.map((token, index) =>
+              token === "..." ? (
+                <span key={`ellipsis-${index}`} className="px-1 text-sm text-muted-foreground">
+                  ...
+                </span>
+              ) : token === data.pagination.page ? (
+                <span
+                  key={token}
+                  className={cn(
+                    buttonVariants({ variant: "secondary", size: "sm" }),
+                    "pointer-events-none min-w-8 px-2",
+                  )}
+                >
+                  {token}
+                </span>
+              ) : (
+                <Link
+                  key={token}
+                  href={buildHref({
+                    q,
+                    status,
+                    enterprise,
+                    page: token,
+                    pageSize: data.pagination.page_size,
+                  })}
+                  className={cn(buttonVariants({ variant: "outline", size: "sm" }), "min-w-8 px-2")}
+                >
+                  {token}
+                </Link>
+              ),
+            )}
+          </div>
 
           {data.pagination.page < totalPages ? (
             <Link

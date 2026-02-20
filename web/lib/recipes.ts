@@ -22,6 +22,7 @@ export type AllergenSlug =
 export type Recipe = {
   id: string;
   pluNumber: number;
+  imageUrl?: string;
   title: string;
   categoryPath: string[];
   portions: number | null;
@@ -54,8 +55,10 @@ export type RecipeAudienceFilter = "public" | "enterprise" | "all";
 export type PublicRecipeCard = {
   id: string;
   pluNumber: number;
+  imageUrl?: string;
   title: string;
   categoryPath?: string[];
+  allergens?: Partial<Record<AllergenSlug, AllergenStatus>>;
   portions: number | null;
   nutrition?: {
     per100g?: Record<string, number>;
@@ -79,14 +82,34 @@ export type RecipeCategoryOption = {
   count: number;
 };
 
+const ALLERGEN_LABELS: Record<AllergenSlug, string> = {
+  gluten: "Gluten",
+  crustaceans: "Crustaceans",
+  eggs: "Eggs",
+  fish: "Fish",
+  peanuts: "Peanuts",
+  soya: "Soya",
+  milk: "Milk",
+  nuts: "Nuts",
+  celery: "Celery",
+  mustard: "Mustard",
+  sesame: "Sesame",
+  sulphites: "Sulphites",
+  lupin: "Lupin",
+  molluscs: "Molluscs",
+};
+
 type RecipeTitleRow = {
   id: string;
   title: string;
+  pluNumber: number;
 };
 
 export type SubRecipeTarget = {
   id: string;
   title: string;
+  pluNumber: number;
+  directMatch: boolean;
 };
 
 function visibilityPredicate(audience: RecipeAudienceFilter) {
@@ -161,8 +184,19 @@ export async function searchRecipes(query: string) {
   if (!q) return getAllRecipes();
 
   const SEARCH_QUERY = `
-    *[_type == "recipe" && title match $q] | order(title asc, _id asc) {
-      "id": _id, pluNumber, title, categoryPath, portions, nutrition, visibility
+    *[
+      _type == "recipe" &&
+      title match $q
+    ] | order(title asc, _id asc) {
+      "id": _id,
+      pluNumber,
+      "imageUrl": coalesce(image.asset->url, imageUrl, "/recipe-placeholder.svg"),
+      title,
+      categoryPath,
+      portions,
+      allergens,
+      nutrition,
+      visibility
     }
   `;
   return sanity.fetch(SEARCH_QUERY, { q: `*${q}*` });
@@ -187,6 +221,7 @@ export async function countAccessibleRecipes(
   const category = normalizeCategory(options?.category);
   const recipeIds = normalizeRecipeIds(options?.recipeIds);
   const visibility = visibilityPredicate(audience);
+  const qParam = q ? `*${q}*` : null;
   const countQuery = `
     count(
       *[
@@ -199,7 +234,7 @@ export async function countAccessibleRecipes(
     )
   `;
   const totalRaw = await sanity.fetch<number>(countQuery, {
-    q: q ? `*${q}*` : null,
+    q: qParam,
     category,
     recipeIds,
   });
@@ -212,14 +247,23 @@ export async function countAccessibleRecipes(
 export async function listAccessibleRecipes(
   audience: RecipeAudienceFilter,
   query?: string,
-  options?: { page?: number; pageSize?: number; category?: string; recipeIds?: string[] },
+  options?: {
+    page?: number;
+    pageSize?: number;
+    category?: string;
+    recipeIds?: string[];
+  },
 ): Promise<PublicRecipesResult> {
   const q = query?.trim();
   const category = normalizeCategory(options?.category);
   const recipeIds = normalizeRecipeIds(options?.recipeIds);
   const page = normalizePage(options?.page);
   const pageSize = normalizePageSize(options?.pageSize);
-  const params = { q: q ? `*${q}*` : null, category, recipeIds };
+  const params = {
+    q: q ? `*${q}*` : null,
+    category,
+    recipeIds,
+  };
   const visibility = visibilityPredicate(audience);
   const countQuery = `
     count(
@@ -242,9 +286,11 @@ export async function listAccessibleRecipes(
     ] | order(title asc, _id asc)[$start...$end] {
       "id": _id,
       pluNumber,
+      "imageUrl": coalesce(image.asset->url, imageUrl, "/recipe-placeholder.svg"),
       title,
       categoryPath,
       portions,
+      allergens,
       nutrition,
       visibility
     }
@@ -272,6 +318,22 @@ export async function listAccessibleRecipes(
   };
 }
 
+/**
+ * Returns only allergens marked as "contains".
+ * "may_contain" and "none" are intentionally excluded from display.
+ */
+export function listContainedAllergenLabels(allergens: unknown) {
+  if (!allergens || typeof allergens !== "object") return [] as string[];
+  const record = allergens as Partial<Record<AllergenSlug, AllergenStatus>>;
+  const labels: string[] = [];
+  for (const slug of Object.keys(ALLERGEN_LABELS) as AllergenSlug[]) {
+    if (record[slug] === "contains") {
+      labels.push(ALLERGEN_LABELS[slug]);
+    }
+  }
+  return labels;
+}
+
 export async function getRecipeById(id: string) {
   return sanity.fetch(RECIPE_BY_ID_QUERY, { id });
 }
@@ -289,6 +351,7 @@ export async function getAccessibleRecipeById(id: string, audience: RecipeAudien
     ][0]{
       "id": _id,
       pluNumber,
+      "imageUrl": coalesce(image.asset->url, imageUrl, "/recipe-placeholder.svg"),
       title,
       categoryPath,
       portions,
@@ -364,7 +427,8 @@ export async function findSubRecipeTargets(
         !(_id in path("drafts.**"))
       ]{
         "id": _id,
-        title
+        title,
+        pluNumber
       }
     `
     : `
@@ -374,7 +438,8 @@ export async function findSubRecipeTargets(
         ${visibilityPredicate(options.audience)}
       ]{
         "id": _id,
-        title
+        title,
+        pluNumber
       }
     `;
 
@@ -400,12 +465,17 @@ export async function findSubRecipeTargets(
       const score = scoreTitleMatch(labelNorm, row.norm);
       if (score > bestScore) {
         bestScore = score;
-        best = { id: row.id, title: row.title };
+        best = {
+          id: row.id,
+          title: row.title,
+          pluNumber: row.pluNumber,
+          directMatch: score >= 72,
+        };
       }
     }
 
-    // Keep threshold conservative to avoid wrong direct links.
-    result[label] = bestScore >= 72 ? best : null;
+    // strict threshold for direct links, lower threshold for RN-backed fallback search.
+    result[label] = bestScore >= 60 ? best : null;
   }
 
   return result;

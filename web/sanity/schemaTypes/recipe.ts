@@ -1,4 +1,4 @@
-import { defineType, defineField } from "sanity";
+import { defineField, defineType } from "sanity";
 
 /**
  * Recipe document schema.
@@ -11,15 +11,15 @@ export const recipe = defineType({
       plu: "pluNumber",
       pub: "visibility.public",
       ent: "visibility.enterprise",
+      media: "image",
     },
-    prepare({ title, plu, pub, ent }) {
-      const tags = [pub ? "PUBLIC" : null, ent ? "ENTERPRISE" : null].filter(
-        Boolean,
-      );
+    prepare({ title, plu, pub, ent, media }) {
+      const tags = [pub ? "PUBLIC" : null, ent ? "ENTERPRISE" : null].filter(Boolean);
 
       return {
         title,
-        subtitle: `PLU ${plu}${tags.length ? " • " + tags.join(" + ") : ""}`,
+        subtitle: `RN ${plu}${tags.length ? " • " + tags.join(" + ") : ""}`,
+        media,
       };
     },
   },
@@ -29,7 +29,7 @@ export const recipe = defineType({
   fields: [
     defineField({
       name: "pluNumber",
-      title: "PLU number",
+      title: "RN (Recipe Number)",
       type: "number",
       validation: (R) => R.required().integer().positive(),
     }),
@@ -46,6 +46,21 @@ export const recipe = defineType({
       of: [{ type: "string" }],
     }),
     defineField({ name: "portions", title: "Portions", type: "number" }),
+    defineField({
+      name: "image",
+      title: "Recipe image",
+      type: "image",
+      options: { hotspot: true },
+      description:
+        "Optional uploaded image. If empty, the app falls back to Image URL and then placeholder.",
+    }),
+    defineField({
+      name: "imageUrl",
+      title: "Image URL (fallback)",
+      type: "string",
+      description:
+        "Fallback image URL/path used when no uploaded image is set (supports /recipe-placeholder.svg).",
+    }),
 
     defineField({
       name: "ingredients",
@@ -173,9 +188,7 @@ export const recipe = defineType({
       name: "source",
       title: "Source",
       type: "object",
-      fields: [
-        defineField({ name: "pdfPath", type: "string", readOnly: true }),
-      ],
+      fields: [defineField({ name: "pdfPath", type: "string", readOnly: true })],
     }),
   ],
 });

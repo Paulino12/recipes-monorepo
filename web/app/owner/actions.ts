@@ -27,9 +27,16 @@ function getAdminApiKey() {
   return adminApiKey;
 }
 
-async function applyVisibility(input: { id: string; audience: AdminAudience; value: boolean }) {
+async function applyVisibility(input: {
+  ids: string[];
+  audience: AdminAudience;
+  value: boolean;
+}) {
   const adminApiKey = getAdminApiKey();
   const endpoint = new URL("/api/admin/recipes", getInternalApiOrigin()).toString();
+
+  const uniqueIds = [...new Set(input.ids.map((id) => id.trim()).filter(Boolean))];
+  if (!uniqueIds.length) throw new Error("Missing recipe id");
 
   const response = await fetch(endpoint, {
     method: "PATCH",
@@ -39,7 +46,7 @@ async function applyVisibility(input: { id: string; audience: AdminAudience; val
     },
     cache: "no-store",
     body: JSON.stringify({
-      id: input.id,
+      ids: uniqueIds,
       audience: input.audience,
       value: input.value,
     }),
@@ -65,7 +72,7 @@ export async function toggleVisibilityAction(formData: FormData) {
   const value = parseValue(String(formData.get("value") ?? "").trim());
 
   if (!id) throw new Error("Missing recipe id");
-  await applyVisibility({ id, audience, value });
+  await applyVisibility({ ids: [id], audience, value });
 
   // Keep owner and public pages in sync after a visibility toggle.
   revalidatePath("/");
@@ -79,23 +86,7 @@ export async function setPageVisibilityAction(formData: FormData) {
 
   const ids = [...new Set(idsRaw.split(",").map((id) => id.trim()).filter(Boolean))];
   if (!ids.length) throw new Error("No recipes in current page to update.");
-
-  const failures: Array<{ id: string; reason: string }> = [];
-  for (const id of ids) {
-    try {
-      await applyVisibility({ id, audience, value });
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : "unknown error";
-      failures.push({ id, reason });
-    }
-  }
-
-  if (failures.length) {
-    const first = failures[0];
-    throw new Error(
-      `Bulk update partially failed (${failures.length}/${ids.length}). First failure: ${first.id} -> ${first.reason}`,
-    );
-  }
+  await applyVisibility({ ids, audience, value });
 
   // Keep owner and public pages in sync after a visibility toggle.
   revalidatePath("/");

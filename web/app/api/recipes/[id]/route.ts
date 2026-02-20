@@ -48,6 +48,7 @@ export async function GET(
     ][0]{
       "id": _id,
       pluNumber,
+      "imageUrl": coalesce(image.asset->url, imageUrl, "/recipe-placeholder.svg"),
       title,
       categoryPath,
       portions,

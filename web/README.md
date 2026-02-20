@@ -146,6 +146,27 @@ npm run studio:build
 npm run studio:deploy
 ```
 
+## Recipe Data Pipeline
+
+Recipe import data is normalized with a reusable script before Sanity import:
+
+```bash
+npm run data:prepare
+```
+
+This script:
+
+- Cleans ingredient supplier/packaging tails
+- Rebuilds ingredient text from `qty + unit + item`
+- Converts recipe numbers from `93...` to `12...` (`id`, `_id`, `pluNumber`)
+- Ensures `imageUrl` fallback is present (`/recipe-placeholder.svg`)
+
+To prepare and import in one command:
+
+```bash
+npm run data:import
+```
+
 ## Test
 
 ```bash

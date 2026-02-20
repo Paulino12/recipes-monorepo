@@ -13,11 +13,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FavoriteStarIcon } from "@/components/favorite-star-icon";
+import { PrintRecipeButton } from "@/components/print-recipe-button";
 import {
   extractPtnReference,
   findSubRecipeTargets,
   getAccessibleRecipeById,
   getRecipeById,
+  listContainedAllergenLabels,
   RecipeAudienceFilter,
 } from "@/lib/recipes";
 import { getFavoriteIdsFromCookieStore } from "@/lib/api/favoriteCookie";
@@ -35,7 +37,8 @@ type RecipeDetailSearchParams = {
 };
 
 function parseAudience(value?: string): RecipeAudienceFilter | null {
-  if (value === "public" || value === "enterprise" || value === "all") return value;
+  if (value === "public" || value === "enterprise" || value === "all")
+    return value;
   return null;
 }
 
@@ -70,6 +73,18 @@ function formatNumber(value: number | null) {
   if (value === null) return "-";
   const rounded = Number(value.toFixed(1));
   return Number.isInteger(rounded) ? String(rounded) : String(rounded);
+}
+
+function trafficLightClass(riPercent: number | null) {
+  if (riPercent === null) return "border-slate-200 bg-slate-100 text-slate-700";
+  if (riPercent <= 5)
+    return "border-emerald-200 bg-emerald-100 text-emerald-800";
+  if (riPercent <= 20) return "border-amber-200 bg-amber-100 text-amber-800";
+  return "border-rose-200 bg-rose-100 text-rose-800";
+}
+
+function formatRiLabel(riPercent: number | null) {
+  return riPercent === null ? "No RI" : `${formatNumber(riPercent)}% RI`;
 }
 
 export default async function RecipePage({
@@ -118,7 +133,10 @@ export default async function RecipePage({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Link href="/recipes" className={buttonVariants({ variant: "outline" })}>
+            <Link
+              href="/recipes"
+              className={buttonVariants({ variant: "outline" })}
+            >
               Back to recipes
             </Link>
           </CardContent>
@@ -145,14 +163,42 @@ export default async function RecipePage({
   const perServing = recipe.nutrition?.perServing;
   const riPercent = recipe.nutrition?.riPercent;
 
-  const energyKjPer100g = readNumeric(per100g, ["energyKj", "energy_kj", "kj", "kJ"]);
-  const energyKcalPer100g = readNumeric(per100g, ["energyKcal", "energy_kcal", "kcal", "kCal"]);
+  const energyKjPer100g = readNumeric(per100g, [
+    "energyKj",
+    "energy_kj",
+    "kj",
+    "kJ",
+  ]);
+  const energyKcalPer100g = readNumeric(per100g, [
+    "energyKcal",
+    "energy_kcal",
+    "kcal",
+    "kCal",
+  ]);
 
-  const energyKjPerServing = readNumeric(perServing, ["energyKj", "energy_kj", "kj", "kJ"]);
-  const energyKcalPerServing = readNumeric(perServing, ["energyKcal", "energy_kcal", "kcal", "kCal"]);
+  const energyKjPerServing = readNumeric(perServing, [
+    "energyKj",
+    "energy_kj",
+    "kj",
+    "kJ",
+  ]);
+  const energyKcalPerServing = readNumeric(perServing, [
+    "energyKcal",
+    "energy_kcal",
+    "kcal",
+    "kCal",
+  ]);
   const fatPerServing = readNumeric(perServing, ["fatG", "fat_g", "fat"]);
-  const saturatesPerServing = readNumeric(perServing, ["saturatesG", "saturates_g", "saturates"]);
-  const sugarsPerServing = readNumeric(perServing, ["sugarsG", "sugars_g", "sugars"]);
+  const saturatesPerServing = readNumeric(perServing, [
+    "saturatesG",
+    "saturates_g",
+    "saturates",
+  ]);
+  const sugarsPerServing = readNumeric(perServing, [
+    "sugarsG",
+    "sugars_g",
+    "sugars",
+  ]);
   const saltPerServing = readNumeric(perServing, ["saltG", "salt_g", "salt"]);
 
   const riEnergy = readNumeric(riPercent, ["energy"]);
@@ -160,6 +206,7 @@ export default async function RecipePage({
   const riSaturates = readNumeric(riPercent, ["saturates"]);
   const riSugars = readNumeric(riPercent, ["sugars"]);
   const riSalt = readNumeric(riPercent, ["salt"]);
+  const containedAllergens = listContainedAllergenLabels(recipe.allergens);
 
   const ingredientRows = Array.isArray(recipe.ingredients)
     ? (recipe.ingredients as Array<Record<string, unknown>>)
@@ -186,27 +233,34 @@ export default async function RecipePage({
       : {};
 
   return (
-    <main className="mx-auto max-w-4xl px-4 pb-16 pt-8 sm:px-6">
+    <main className="mx-auto max-w-4xl px-4 pb-16 pt-8 print:max-w-none print:px-0 print:pb-0 print:pt-0 sm:px-6">
       <Link
         href={
           isOwner && from === "owner"
             ? "/owner"
             : `/recipes?audience=${encodeURIComponent(audience)}${favoritesOnly ? "&favorites=1" : ""}`
         }
-        className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "mb-4")}
+        className={cn(
+          buttonVariants({ variant: "ghost", size: "sm" }),
+          "mb-4 print:hidden",
+        )}
       >
         Back to list
       </Link>
 
-      <Card className="surface-panel mb-6 border-white/40">
+      <Card className="surface-panel mb-6 border-white/40 print:break-inside-avoid print:border-border print:shadow-none">
         <CardHeader className="space-y-4">
           {isOwner ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant={recipe.visibility?.public ? "success" : "outline"}>
+            <div className="flex flex-wrap items-center gap-2 print:hidden">
+              <Badge
+                variant={recipe.visibility?.public ? "success" : "outline"}
+              >
                 Public {recipe.visibility?.public ? "ON" : "OFF"}
               </Badge>
               <Badge
-                variant={recipe.visibility?.enterprise ? "secondary" : "outline"}
+                variant={
+                  recipe.visibility?.enterprise ? "secondary" : "outline"
+                }
               >
                 Enterprise {recipe.visibility?.enterprise ? "ON" : "OFF"}
               </Badge>
@@ -216,121 +270,234 @@ export default async function RecipePage({
             <div className="space-y-2">
               <CardTitle className="text-3xl">{recipe.title}</CardTitle>
               <CardDescription>
-                {recipe.categoryPath?.join(" / ") || "Uncategorised"} | PLU{" "}
+                {recipe.categoryPath?.join(" / ") || "Uncategorised"} | RN{" "}
                 {recipe.pluNumber}
               </CardDescription>
             </div>
-            <form action={setRecipeFavoriteAction}>
-              <input type="hidden" name="recipeId" value={recipe.id} />
-              <input type="hidden" name="value" value={String(!isFavorite)} />
-              <Button
-                type="submit"
-                size="sm"
-                variant="ghost"
-                className={cn(
-                  "h-11 w-11 overflow-visible p-0",
-                  isFavorite ? "text-amber-500 hover:text-amber-600" : "text-muted-foreground hover:text-foreground",
-                )}
-                aria-label={isFavorite ? "Remove from favorites" : "Save as favorite"}
-              >
-                <FavoriteStarIcon filled={isFavorite} size={24} />
-              </Button>
-            </form>
+            <div className="flex items-center gap-2 print:hidden">
+              <PrintRecipeButton />
+              <form action={setRecipeFavoriteAction}>
+                <input type="hidden" name="recipeId" value={recipe.id} />
+                <input type="hidden" name="value" value={String(!isFavorite)} />
+                <Button
+                  type="submit"
+                  size="sm"
+                  variant="ghost"
+                  className={cn(
+                    "h-11 w-11 overflow-visible p-0",
+                    isFavorite
+                      ? "text-amber-500 hover:text-amber-600"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                  aria-label={
+                    isFavorite ? "Remove from favorites" : "Save as favorite"
+                  }
+                >
+                  <FavoriteStarIcon filled={isFavorite} size={24} />
+                </Button>
+              </form>
+            </div>
           </div>
         </CardHeader>
-        <CardContent className="grid gap-3 pt-0 sm:grid-cols-3">
-          <div className="rounded-lg border border-border/70 bg-background/60 p-3">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">
-              Portions
-            </p>
-            <p className="mt-1 text-lg font-semibold">
-              {recipe.portions ?? "-"}
-            </p>
-          </div>
-          <div className="rounded-lg border border-border/70 bg-background/60 p-3">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">
-              Portion Weight
-            </p>
-            <p className="mt-1 text-lg font-semibold">
-              {portionWeight ? `${portionWeight} g` : "-"}
-            </p>
-          </div>
-          <div className="rounded-lg border border-border/70 bg-background/60 p-3">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">
-              Category
-            </p>
-            <p className="mt-1 text-sm font-medium">
-              {recipe.categoryPath?.[0] ?? "Uncategorised"}
-            </p>
+        <CardContent className="space-y-4 pt-0">
+          <div className="grid gap-3 md:grid-cols-[1.3fr_1fr] md:items-stretch">
+            <div className="overflow-hidden rounded-lg border border-border/70 bg-muted/20">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={
+                  (recipe.imageUrl ?? "/recipe-placeholder.svg").trim() ||
+                  "/recipe-placeholder.svg"
+                }
+                alt={recipe.title}
+                className="h-56 w-full object-cover md:h-full md:min-h-52"
+                loading="lazy"
+              />
+            </div>
+
+            <div className="space-y-3">
+              <div className="rounded-lg border border-border/70 bg-background/60 p-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Portions
+                </p>
+                <p className="mt-1 text-lg font-semibold">
+                  {recipe.portions ?? "-"}
+                </p>
+              </div>
+              <div className="rounded-lg border border-border/70 bg-background/60 p-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Portion Weight
+                </p>
+                <p className="mt-1 text-lg font-semibold">
+                  {portionWeight ? `${portionWeight} g` : "-"}
+                </p>
+              </div>
+              <div className="rounded-lg border border-border/70 bg-background/60 p-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Category
+                </p>
+                <p className="mt-1 text-sm font-medium">
+                  {recipe.categoryPath?.[0] ?? "Uncategorised"}
+                </p>
+              </div>
+              <div className="rounded-lg border border-border/70 bg-background/60 p-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Allergens
+                </p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {containedAllergens.length > 0
+                    ? containedAllergens.map((name) => `✓ ${name}`).join(", ")
+                    : "None listed"}
+                </p>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      <Card className="mb-6">
+      <Card className="mb-6 print:break-inside-avoid print:shadow-none">
         <CardHeader>
           <CardTitle className="text-lg">Nutrition</CardTitle>
-          <CardDescription>Presented from the recipe nutrition data.</CardDescription>
+          <CardDescription>
+            Presented from the recipe nutrition data.
+          </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-3">
           <div className="rounded-lg border border-border/70 bg-background/60 p-3">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Per 100g</p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">
+              Per 100g
+            </p>
             <div className="mt-2 space-y-1 text-sm">
               <p>
-                Energy: <span className="font-medium">{formatNumber(energyKjPer100g)}</span> kJ
+                Energy:{" "}
+                <span className="font-medium">
+                  {formatNumber(energyKjPer100g)}
+                </span>{" "}
+                kJ
               </p>
               <p>
-                Energy: <span className="font-medium">{formatNumber(energyKcalPer100g)}</span> kcal
+                Energy:{" "}
+                <span className="font-medium">
+                  {formatNumber(energyKcalPer100g)}
+                </span>{" "}
+                kcal
               </p>
             </div>
           </div>
 
           <div className="rounded-lg border border-border/70 bg-background/60 p-3">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Per serving</p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">
+              Per serving
+            </p>
             <div className="mt-2 space-y-1 text-sm">
               <p>
-                Energy: <span className="font-medium">{formatNumber(energyKjPerServing)}</span> kJ /{" "}
-                <span className="font-medium">{formatNumber(energyKcalPerServing)}</span> kcal
+                Energy:{" "}
+                <span className="font-medium">
+                  {formatNumber(energyKjPerServing)}
+                </span>{" "}
+                kJ /{" "}
+                <span className="font-medium">
+                  {formatNumber(energyKcalPerServing)}
+                </span>{" "}
+                kcal
               </p>
               <p>
-                Fat: <span className="font-medium">{formatNumber(fatPerServing)}</span> g
+                Fat:{" "}
+                <span className="font-medium">
+                  {formatNumber(fatPerServing)}
+                </span>{" "}
+                g
               </p>
               <p>
-                Saturates: <span className="font-medium">{formatNumber(saturatesPerServing)}</span> g
+                Saturates:{" "}
+                <span className="font-medium">
+                  {formatNumber(saturatesPerServing)}
+                </span>{" "}
+                g
               </p>
               <p>
-                Sugars: <span className="font-medium">{formatNumber(sugarsPerServing)}</span> g
+                Sugars:{" "}
+                <span className="font-medium">
+                  {formatNumber(sugarsPerServing)}
+                </span>{" "}
+                g
               </p>
               <p>
-                Salt: <span className="font-medium">{formatNumber(saltPerServing)}</span> g
+                Salt:{" "}
+                <span className="font-medium">
+                  {formatNumber(saltPerServing)}
+                </span>{" "}
+                g
               </p>
             </div>
           </div>
 
           <div className="rounded-lg border border-border/70 bg-background/60 p-3">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Reference intake</p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">
+              Reference intake
+            </p>
             <div className="mt-2 space-y-1 text-sm">
-              <p>
-                Energy: <span className="font-medium">{formatNumber(riEnergy)}</span>%
+              <p className="flex items-center justify-between gap-2">
+                <span>Energy</span>
+                <span
+                  className={cn(
+                    "inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold",
+                    trafficLightClass(riEnergy),
+                  )}
+                >
+                  {formatRiLabel(riEnergy)}
+                </span>
               </p>
-              <p>
-                Fat: <span className="font-medium">{formatNumber(riFat)}</span>%
+              <p className="flex items-center justify-between gap-2">
+                <span>Fat</span>
+                <span
+                  className={cn(
+                    "inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold",
+                    trafficLightClass(riFat),
+                  )}
+                >
+                  {formatRiLabel(riFat)}
+                </span>
               </p>
-              <p>
-                Saturates: <span className="font-medium">{formatNumber(riSaturates)}</span>%
+              <p className="flex items-center justify-between gap-2">
+                <span>Saturates</span>
+                <span
+                  className={cn(
+                    "inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold",
+                    trafficLightClass(riSaturates),
+                  )}
+                >
+                  {formatRiLabel(riSaturates)}
+                </span>
               </p>
-              <p>
-                Sugars: <span className="font-medium">{formatNumber(riSugars)}</span>%
+              <p className="flex items-center justify-between gap-2">
+                <span>Sugars</span>
+                <span
+                  className={cn(
+                    "inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold",
+                    trafficLightClass(riSugars),
+                  )}
+                >
+                  {formatRiLabel(riSugars)}
+                </span>
               </p>
-              <p>
-                Salt: <span className="font-medium">{formatNumber(riSalt)}</span>%
+              <p className="flex items-center justify-between gap-2">
+                <span>Salt</span>
+                <span
+                  className={cn(
+                    "inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold",
+                    trafficLightClass(riSalt),
+                  )}
+                >
+                  {formatRiLabel(riSalt)}
+                </span>
               </p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-        <Card className="h-fit">
+      <div className="grid gap-6 print:grid-cols-1 lg:grid-cols-[0.95fr_1.05fr]">
+        <Card className="h-fit print:break-inside-avoid">
           <CardHeader>
             <CardTitle className="text-lg">Ingredients</CardTitle>
           </CardHeader>
@@ -347,7 +514,7 @@ export default async function RecipePage({
                     const fallbackHref = ptnLabel
                       ? `/recipes?audience=${encodeURIComponent(audience)}&q=${encodeURIComponent(ptnLabel)}`
                       : null;
-                    const targetHref = target
+                    const targetHref = target?.directMatch
                       ? `/recipes/${encodeURIComponent(target.id)}?audience=${encodeURIComponent(audience)}${
                           isOwner ? "&from=owner" : ""
                         }`
@@ -363,7 +530,10 @@ export default async function RecipePage({
                           <p className="mt-1 text-xs text-muted-foreground">
                             Sub recipe:{" "}
                             {targetHref ? (
-                              <Link href={targetHref} className="underline underline-offset-4 hover:text-foreground">
+                              <Link
+                                href={targetHref}
+                                className="underline underline-offset-4 hover:text-foreground"
+                              >
                                 {target?.title ?? ptnLabel}
                               </Link>
                             ) : fallbackHref ? (
@@ -391,7 +561,7 @@ export default async function RecipePage({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="print:break-inside-avoid">
           <CardHeader>
             <CardTitle className="text-lg">Method</CardTitle>
           </CardHeader>

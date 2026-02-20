@@ -50,6 +50,7 @@ export async function GET(req: NextRequest) {
     ] | order(title asc) {
       "id": _id,
       pluNumber,
+      "imageUrl": coalesce(image.asset->url, imageUrl, "/recipe-placeholder.svg"),
       title,
       categoryPath,
       portions,

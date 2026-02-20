@@ -7,6 +7,8 @@
     "studio": "sanity dev --port 3333",
     "studio:build": "sanity build",
     "studio:deploy": "sanity deploy",
+    "data:prepare": "node scripts/prepare-recipe-dataset.js",
+    "data:import": "npm run data:prepare && npx sanity dataset import data/sanity_golden_samples_v3.ndjson production --replace",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

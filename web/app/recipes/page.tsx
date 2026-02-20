@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { FavoriteStarIcon } from "@/components/favorite-star-icon";
 import { getFavoriteIdsFromCookieStore } from "@/lib/api/favoriteCookie";
 import { listRecipeFavoriteIds } from "@/lib/api/favorites";
+import { buildCompactPagination } from "@/lib/pagination";
 import { getServerAccessSession } from "@/lib/api/serverSession";
 import {
   buildHrefWithQuery,
@@ -20,6 +21,7 @@ import {
 } from "@/lib/searchParams";
 import {
   countAccessibleRecipes,
+  listContainedAllergenLabels,
   listAccessibleCategories,
   listAccessibleRecipes,
   RecipeAudienceFilter,
@@ -117,6 +119,16 @@ export default async function RecipesPage({
   const audience = getAllowedAudience(requestedAudience, canViewPublic, canViewEnterprise);
   const cookieStore = await cookies();
   const cookieFavoriteIds = getFavoriteIdsFromCookieStore(cookieStore);
+  const allFavoriteIds = new Set([
+    ...cookieFavoriteIds,
+    ...(await listRecipeFavoriteIds(session.user.id)),
+  ]);
+  const favoriteRecipeIds = [...allFavoriteIds];
+  const favoriteFilterIds = favoritesOnly
+    ? favoriteRecipeIds.length > 0
+      ? favoriteRecipeIds
+      : ["__no_favorites__"]
+    : undefined;
 
   if (!audience) {
     return (
@@ -138,27 +150,15 @@ export default async function RecipesPage({
     );
   }
 
-  // Favorites source of truth is temporarily merged from:
-  // - DB rows (when migrated)
-  // - cookie fallback (always present for current browser)
-  const allFavoriteIds =
-    favoritesOnly
-      ? new Set([
-          ...cookieFavoriteIds,
-          ...(await listRecipeFavoriteIds(session.user.id)),
-        ])
-      : null;
-  const favoriteRecipeIds = allFavoriteIds ? [...allFavoriteIds] : undefined;
-
   const data = await listAccessibleRecipes(audience, q, {
     page: requestedPage,
     pageSize: requestedPageSize,
     category: selectedCategory,
-    recipeIds: favoriteRecipeIds,
+    recipeIds: favoriteFilterIds,
   });
 
   const categories = await listAccessibleCategories(audience, {
-    recipeIds: favoriteRecipeIds,
+    recipeIds: favoriteFilterIds,
   });
   const activeCategory =
     selectedCategory && categories.some((category) => category.name === selectedCategory)
@@ -167,31 +167,37 @@ export default async function RecipesPage({
 
   const [publicCount, enterpriseCount, allCount] = await Promise.all([
     canViewPublic
-      ? countAccessibleRecipes("public", q, { category: activeCategory, recipeIds: favoriteRecipeIds })
+      ? countAccessibleRecipes("public", q, {
+          category: activeCategory,
+          recipeIds: favoriteFilterIds,
+        })
       : Promise.resolve(0),
     canViewEnterprise
-      ? countAccessibleRecipes("enterprise", q, { category: activeCategory, recipeIds: favoriteRecipeIds })
+      ? countAccessibleRecipes("enterprise", q, {
+          category: activeCategory,
+          recipeIds: favoriteFilterIds,
+        })
       : Promise.resolve(0),
     canViewPublic && canViewEnterprise
-      ? countAccessibleRecipes("all", q, { category: activeCategory, recipeIds: favoriteRecipeIds })
+      ? countAccessibleRecipes("all", q, {
+          category: activeCategory,
+          recipeIds: favoriteFilterIds,
+        })
       : Promise.resolve(0),
   ]);
+  const favoritesCount = favoriteRecipeIds.length
+    ? await countAccessibleRecipes(audience, q, {
+        category: activeCategory,
+        recipeIds: favoriteRecipeIds,
+      })
+    : 0;
 
   const recipes = data.items;
-  const listAnimationKey = `${audience}|${activeCategory}|${q}|${favoritesOnly ? "fav" : "all"}|${data.page}|${data.pageSize}`;
-  // For normal browsing we only resolve favorites for currently listed cards.
-  const favoriteIds =
-    favoritesOnly
-      ? allFavoriteIds ?? new Set<string>()
-      : recipes.length > 0
-      ? new Set([
-          ...cookieFavoriteIds,
-          ...(await listRecipeFavoriteIds(
-            session.user.id,
-            recipes.map((recipe) => recipe.id),
-          )),
-        ])
-      : new Set<string>();
+  const listAnimationKey = `${audience}|${activeCategory}|${q}|${
+    favoritesOnly ? "fav" : "all"
+  }|${data.page}|${data.pageSize}`;
+  const favoriteIds = allFavoriteIds;
+  const pageTokens = buildCompactPagination(data.totalPages, data.page);
 
   return (
     <main className="mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6">
@@ -277,7 +283,7 @@ export default async function RecipesPage({
                     size: "sm",
                   })}
                 >
-                  {favoritesOnly ? "Favourites (on)" : "Favourites"}
+                  Favourites ({favoritesCount})
                 </Link>
               </div>
 
@@ -367,6 +373,7 @@ export default async function RecipesPage({
             const energyKj = readNumeric(per100g, ["energyKj", "energy_kj", "kj", "kJ"]);
             const energyKcal = readNumeric(per100g, ["energyKcal", "energy_kcal", "kcal", "kCal"]);
             const isFavorite = favoriteIds.has(recipe.id);
+            const containedAllergens = listContainedAllergenLabels(recipe.allergens);
 
             return (
               <MotionStaggerItem key={recipe.id}>
@@ -388,8 +395,18 @@ export default async function RecipesPage({
                     </Button>
                   </form>
 
-                  <CardHeader className="space-y-3 pr-20">
-                    <div className="flex items-start justify-between gap-4">
+                  <CardHeader className="pr-20">
+                    <div className="flex items-start gap-3">
+                      <div className="w-28 flex-none overflow-hidden rounded-md border border-border/60 bg-muted/20 sm:w-32">
+                      {/* Each recipe has a stable fallback placeholder until a real image is provided. */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={(recipe.imageUrl ?? "/recipe-placeholder.svg").trim() || "/recipe-placeholder.svg"}
+                        alt={recipe.title}
+                        loading="lazy"
+                        className="h-24 w-full object-cover sm:h-28"
+                      />
+                      </div>
                       <div>
                         <CardTitle className="text-lg leading-tight">
                           <Link
@@ -402,8 +419,14 @@ export default async function RecipesPage({
                           </Link>
                         </CardTitle>
                         <CardDescription className="mt-1">
-                          {recipe.categoryPath?.[0] ?? "Uncategorised"}
+                          {(recipe.categoryPath?.[0] ?? "Uncategorised") + ` | RN ${recipe.pluNumber}`}
                         </CardDescription>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Allergens:{" "}
+                          {containedAllergens.length > 0
+                            ? containedAllergens.map((name) => `✓ ${name}`).join(", ")
+                            : "None listed"}
+                        </p>
                       </div>
                     </div>
                   </CardHeader>
@@ -445,7 +468,7 @@ export default async function RecipesPage({
           </p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {data.page > 1 ? (
             <Link
               href={buildRecipesHref({
@@ -465,6 +488,41 @@ export default async function RecipesPage({
               Previous
             </span>
           )}
+
+          <div className="flex items-center gap-1">
+            {pageTokens.map((token, index) =>
+              token === "..." ? (
+                <span key={`ellipsis-${index}`} className="px-1 text-sm text-muted-foreground">
+                  ...
+                </span>
+              ) : token === data.page ? (
+                <span
+                  key={token}
+                  className={cn(
+                    buttonVariants({ variant: "secondary", size: "sm" }),
+                    "pointer-events-none min-w-8 px-2",
+                  )}
+                >
+                  {token}
+                </span>
+              ) : (
+                <Link
+                  key={token}
+                  href={buildRecipesHref({
+                    q,
+                    category: activeCategory,
+                    audience,
+                    favoritesOnly,
+                    page: token,
+                    pageSize: data.pageSize,
+                  })}
+                  className={cn(buttonVariants({ variant: "outline", size: "sm" }), "min-w-8 px-2")}
+                >
+                  {token}
+                </Link>
+              ),
+            )}
+          </div>
 
           {data.page < data.totalPages ? (
             <Link

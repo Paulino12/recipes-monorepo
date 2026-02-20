@@ -65,7 +65,7 @@ export function SiteHeader({ session }: SiteHeaderProps) {
   const currentPathname = hydrated ? pathname : "";
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/70 bg-background/85 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-border/70 bg-background/85 backdrop-blur print:hidden">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
         <div className="flex items-center gap-2">
           <Link href="/" className="font-semibold tracking-tight">

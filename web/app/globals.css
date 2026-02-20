@@ -231,3 +231,32 @@
 .route-progress-bar {
   animation: route-progress 1.85s ease-in-out infinite;
 }
+
+@media print {
+  @page {
+    size: auto;
+    margin: 12mm;
+  }
+
+  body {
+    background: #fff !important;
+    background-image: none !important;
+    color: #000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .surface-panel {
+    background: #fff !important;
+    backdrop-filter: none !important;
+  }
+
+  .shadow-sm,
+  .shadow,
+  .shadow-md,
+  .shadow-lg,
+  .shadow-xl,
+  .shadow-2xl {
+    box-shadow: none !important;
+  }
+}
