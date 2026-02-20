@@ -201,6 +201,14 @@
   h3 {
     letter-spacing: -0.02em;
   }
+
+  a {
+    transition: opacity 150ms ease-out;
+  }
+
+  a:active {
+    opacity: 0.78;
+  }
 }
 
 @layer utilities {
@@ -208,4 +216,18 @@
     background: color-mix(in oklab, var(--card) 92%, white 8%);
     backdrop-filter: blur(8px);
   }
+}
+
+@keyframes route-progress {
+  0% {
+    transform: translateX(-130%);
+  }
+
+  100% {
+    transform: translateX(430%);
+  }
+}
+
+.route-progress-bar {
+  animation: route-progress 1.85s ease-in-out infinite;
 }

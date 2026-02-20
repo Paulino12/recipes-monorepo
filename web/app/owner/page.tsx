@@ -1,11 +1,13 @@
 ﻿import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { MotionReveal } from "@/components/motion/reveal";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
+import { PendingSubmitSwitch } from "@/components/ui/pending-submit-switch";
 import { type AdminRecipesResult } from "@/lib/api/adminRecipes";
 import { getInternalApiOrigin } from "@/lib/api/origin";
 import { getServerAccessSession } from "@/lib/api/serverSession";
@@ -54,29 +56,11 @@ function HeaderVisibilitySwitch({
       <input type="hidden" name="ids" value={ids} />
       <input type="hidden" name="audience" value={audience} />
       <input type="hidden" name="value" value={String(!checked)} />
-      <span
-        className={cn(
-          "text-[11px] font-semibold leading-none",
-          checked ? "text-emerald-700" : "text-muted-foreground",
-        )}
-      >
-        ON
-      </span>
-      <Switch
-        type="submit"
+      <PendingSubmitSwitch
         checked={checked}
-        checkedSide="left"
         disabled={disabled}
-        aria-label={`Toggle all ${audience} visibility for current page`}
+        ariaLabel={`Toggle all ${audience} visibility for current page`}
       />
-      <span
-        className={cn(
-          "text-[11px] font-semibold leading-none",
-          checked ? "text-muted-foreground" : "text-slate-700",
-        )}
-      >
-        OFF
-      </span>
     </form>
   );
 }
@@ -153,7 +137,8 @@ export default async function OwnerPage({
 
   return (
     <main className="mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6">
-      <section className="mb-6 grid gap-4 lg:grid-cols-[1.4fr_0.6fr]">
+      <MotionReveal>
+        <section className="mb-6 grid gap-4 lg:grid-cols-[1.4fr_0.6fr]">
         <Card className="surface-panel border-white/40">
           <CardHeader className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
@@ -242,9 +227,11 @@ export default async function OwnerPage({
             </Link>
           </CardContent>
         </Card>
-      </section>
+        </section>
+      </MotionReveal>
 
-      <Card className="overflow-hidden">
+      <MotionReveal delay={0.06}>
+        <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="bg-muted/40">
@@ -306,9 +293,13 @@ export default async function OwnerPage({
                         <input type="hidden" name="id" value={recipe.id} />
                         <input type="hidden" name="audience" value="public" />
                         <input type="hidden" name="value" value={String(!isPublic)} />
-                        <Button type="submit" size="sm" variant={isPublic ? "success" : "outline"}>
+                        <FormSubmitButton
+                          size="sm"
+                          variant={isPublic ? "success" : "outline"}
+                          pendingText="Saving..."
+                        >
                           {isPublic ? "ON" : "OFF"}
-                        </Button>
+                        </FormSubmitButton>
                       </form>
                     </td>
                     <td className="px-4 py-3 text-center">
@@ -316,9 +307,13 @@ export default async function OwnerPage({
                         <input type="hidden" name="id" value={recipe.id} />
                         <input type="hidden" name="audience" value="enterprise" />
                         <input type="hidden" name="value" value={String(!isEnterprise)} />
-                        <Button type="submit" size="sm" variant={isEnterprise ? "success" : "outline"}>
+                        <FormSubmitButton
+                          size="sm"
+                          variant={isEnterprise ? "success" : "outline"}
+                          pendingText="Saving..."
+                        >
                           {isEnterprise ? "ON" : "OFF"}
-                        </Button>
+                        </FormSubmitButton>
                       </form>
                     </td>
                   </tr>
@@ -327,9 +322,10 @@ export default async function OwnerPage({
             </tbody>
           </table>
         </div>
-      </Card>
+        </Card>
+      </MotionReveal>
 
-      <div className="mt-4 flex items-center justify-between gap-3">
+      <MotionReveal delay={0.1} className="mt-4 flex items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           Page <span className="font-medium text-foreground">{data.page}</span> of{" "}
           <span className="font-medium text-foreground">{data.totalPages}</span>
@@ -380,7 +376,7 @@ export default async function OwnerPage({
             </span>
           )}
         </div>
-      </div>
+      </MotionReveal>
     </main>
   );
 }

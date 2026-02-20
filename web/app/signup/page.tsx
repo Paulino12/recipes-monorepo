@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { createClient } from "@supabase/supabase-js";
 
+import { MotionReveal } from "@/components/motion/reveal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -74,64 +75,66 @@ export default function SignUpPage() {
 
   return (
     <main className="mx-auto max-w-xl px-4 pb-16 pt-10 sm:px-6">
-      <Card className="surface-panel border-white/40">
-        <CardHeader className="space-y-2">
-          <CardTitle className="text-3xl">Create Account</CardTitle>
-          <CardDescription>
-            Start as a subscriber and unlock public recipes with web billing.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <form onSubmit={handleSignUp} className="space-y-4">
-            <div className="space-y-2">
-              <label className="block text-sm font-medium" htmlFor="email">
-                Email
-              </label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="you@example.com"
-                required
-                autoComplete="email"
-              />
-            </div>
+      <MotionReveal>
+        <Card className="surface-panel border-white/40">
+          <CardHeader className="space-y-2">
+            <CardTitle className="text-3xl">Create Account</CardTitle>
+            <CardDescription>
+              Start as a subscriber and unlock public recipes with web billing.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <form onSubmit={handleSignUp} className="space-y-4">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium" htmlFor="email">
+                  Email
+                </label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="you@example.com"
+                  required
+                  autoComplete="email"
+                />
+              </div>
 
-            <div className="space-y-2">
-              <label className="block text-sm font-medium" htmlFor="password">
-                Password
-              </label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="********"
-                required
-                autoComplete="new-password"
-              />
-            </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium" htmlFor="password">
+                  Password
+                </label>
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="********"
+                  required
+                  autoComplete="new-password"
+                />
+              </div>
 
-            <div className="flex flex-wrap gap-2">
-              <Button type="submit" disabled={loading}>
-                {loading ? "Creating..." : "Create account"}
-              </Button>
-              <Link href="/signin" className="inline-flex items-center text-sm underline-offset-4 hover:underline">
-                Already have an account?
-              </Link>
-              <Link href="/" className="inline-flex items-center text-sm underline-offset-4 hover:underline">
-                Back to home
-              </Link>
-            </div>
-          </form>
+              <div className="flex flex-wrap gap-2">
+                <Button type="submit" disabled={loading}>
+                  {loading ? "Creating..." : "Create account"}
+                </Button>
+                <Link href="/signin" className="inline-flex items-center text-sm underline-offset-4 hover:underline">
+                  Already have an account?
+                </Link>
+                <Link href="/" className="inline-flex items-center text-sm underline-offset-4 hover:underline">
+                  Back to home
+                </Link>
+              </div>
+            </form>
 
-          {message ? <p className="text-sm text-emerald-700">{message}</p> : null}
-          {error ? <p className="text-sm text-red-700">{error}</p> : null}
-        </CardContent>
-      </Card>
+            {message ? <p className="text-sm text-emerald-700">{message}</p> : null}
+            {error ? <p className="text-sm text-red-700">{error}</p> : null}
+          </CardContent>
+        </Card>
+      </MotionReveal>
     </main>
   );
 }

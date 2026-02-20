@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 import { useSyncExternalStore } from "react";
 
 import { signOutAction } from "@/app/actions/auth";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { FormSubmitButton } from "@/components/ui/form-submit-button";
+import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type HeaderSession = {
@@ -111,14 +112,14 @@ export function SiteHeader({ session }: SiteHeaderProps) {
 
           {session ? (
             <form action={signOutAction}>
-              <Button
-                type="submit"
+              <FormSubmitButton
                 size="sm"
                 variant="outline"
                 className="cursor-pointer"
+                pendingText="Signing out..."
               >
                 Sign out
-              </Button>
+              </FormSubmitButton>
             </form>
           ) : (
             <Link

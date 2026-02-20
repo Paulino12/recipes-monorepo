@@ -1,9 +1,11 @@
 ﻿import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { MotionReveal } from "@/components/motion/reveal";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import { Input } from "@/components/ui/input";
 import { getInternalApiOrigin } from "@/lib/api/origin";
 import { getForwardAuthHeaders, getServerAccessSession } from "@/lib/api/serverSession";
@@ -157,7 +159,8 @@ export default async function OwnerSubscribersPage({
 
   return (
     <main className="mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6">
-      <section className="mb-6 grid gap-4 lg:grid-cols-[1.4fr_0.6fr]">
+      <MotionReveal>
+        <section className="mb-6 grid gap-4 lg:grid-cols-[1.4fr_0.6fr]">
         <Card className="surface-panel border-white/40">
           <CardHeader className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
@@ -243,9 +246,11 @@ export default async function OwnerSubscribersPage({
             </Link>
           </CardContent>
         </Card>
-      </section>
+        </section>
+      </MotionReveal>
 
-      <Card className="overflow-hidden">
+      <MotionReveal delay={0.06}>
+        <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="bg-muted/40 text-left">
@@ -289,9 +294,9 @@ export default async function OwnerSubscribersPage({
                           <option value="canceled">canceled</option>
                           <option value="expired">expired</option>
                         </select>
-                        <Button type="submit" size="sm" variant="outline">
+                        <FormSubmitButton size="sm" variant="outline" pendingText="Saving...">
                           Set
-                        </Button>
+                        </FormSubmitButton>
                       </form>
                     </div>
                   </td>
@@ -310,25 +315,25 @@ export default async function OwnerSubscribersPage({
                       <form action={grantEnterpriseAction}>
                         <input type="hidden" name="userId" value={item.user_id} />
                         <input type="hidden" name="reason" value="Owner dashboard grant" />
-                        <Button
-                          type="submit"
+                        <FormSubmitButton
                           size="sm"
                           variant={item.enterprise_granted ? "success" : "outline"}
+                          pendingText="Saving..."
                         >
                           Grant
-                        </Button>
+                        </FormSubmitButton>
                       </form>
 
                       <form action={revokeEnterpriseAction}>
                         <input type="hidden" name="userId" value={item.user_id} />
                         <input type="hidden" name="reason" value="Owner dashboard revoke" />
-                        <Button
-                          type="submit"
+                        <FormSubmitButton
                           size="sm"
                           variant={!item.enterprise_granted ? "success" : "outline"}
+                          pendingText="Saving..."
                         >
                           Revoke
-                        </Button>
+                        </FormSubmitButton>
                       </form>
                     </div>
                     <p className="mt-2 text-xs text-muted-foreground">
@@ -340,9 +345,10 @@ export default async function OwnerSubscribersPage({
             </tbody>
           </table>
         </div>
-      </Card>
+        </Card>
+      </MotionReveal>
 
-      <div className="mt-4 flex items-center justify-between gap-3">
+      <MotionReveal delay={0.1} className="mt-4 flex items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           Page <span className="font-medium text-foreground">{data.pagination.page}</span> of{" "}
           <span className="font-medium text-foreground">{totalPages}</span>
@@ -396,7 +402,7 @@ export default async function OwnerSubscribersPage({
             </span>
           )}
         </div>
-      </div>
+      </MotionReveal>
     </main>
   );
 }

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 
 import { Badge } from "@/components/ui/badge";
+import { MotionReveal, MotionStaggerItem, MotionStaggerList } from "@/components/motion/reveal";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -177,6 +178,7 @@ export default async function RecipesPage({
   ]);
 
   const recipes = data.items;
+  const listAnimationKey = `${audience}|${activeCategory}|${q}|${favoritesOnly ? "fav" : "all"}|${data.page}|${data.pageSize}`;
   // For normal browsing we only resolve favorites for currently listed cards.
   const favoriteIds =
     favoritesOnly
@@ -193,165 +195,173 @@ export default async function RecipesPage({
 
   return (
     <main className="mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6">
-      <section className="mb-6">
-        <Card className="surface-panel border-white/40 shadow-xl shadow-black/5">
-          <CardHeader className="space-y-5">
-            <div className="space-y-2">
-              <CardTitle className="text-3xl sm:text-4xl">All Recipes</CardTitle>
-              <CardDescription className="max-w-xl text-sm sm:text-base">
-                {isOwner
-                  ? "Browse recipes and visibility scope. Owners see visibility labels on each recipe."
-                  : "Browse recipes based on your current access."}
-              </CardDescription>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              {canViewPublic && canViewEnterprise ? (
-                <Link
-                  href={buildRecipesHref({
-                    q,
-                    category: activeCategory,
-                    audience: "all",
-                    favoritesOnly,
-                    page: 1,
-                    pageSize: data.pageSize,
-                  })}
-                  className={buttonVariants({ variant: audience === "all" ? "secondary" : "outline", size: "sm" })}
-                >
-                  All available ({allCount})
-                </Link>
-              ) : null}
-
-              {canViewPublic ? (
-                <Link
-                  href={buildRecipesHref({
-                    q,
-                    category: activeCategory,
-                    audience: "public",
-                    favoritesOnly,
-                    page: 1,
-                    pageSize: data.pageSize,
-                  })}
-                  className={buttonVariants({
-                    variant: audience === "public" ? "secondary" : "outline",
-                    size: "sm",
-                  })}
-                >
-                  Public ({publicCount})
-                </Link>
-              ) : null}
-
-              {canViewEnterprise ? (
-                <Link
-                  href={buildRecipesHref({
-                    q,
-                    category: activeCategory,
-                    audience: "enterprise",
-                    favoritesOnly,
-                    page: 1,
-                    pageSize: data.pageSize,
-                  })}
-                  className={buttonVariants({
-                    variant: audience === "enterprise" ? "secondary" : "outline",
-                    size: "sm",
-                  })}
-                >
-                  Enterprise ({enterpriseCount})
-                </Link>
-              ) : null}
-
-              <Link
-                href={buildRecipesHref({
-                  q,
-                  category: activeCategory,
-                  audience,
-                  favoritesOnly: !favoritesOnly,
-                  page: 1,
-                  pageSize: data.pageSize,
-                })}
-                className={buttonVariants({
-                  variant: favoritesOnly ? "secondary" : "outline",
-                  size: "sm",
-                })}
-              >
-                {favoritesOnly ? "Favourites (on)" : "Favourites"}
-              </Link>
-            </div>
-
-            <form action="/recipes" method="get" className="space-y-3">
-              <input type="hidden" name="page" value="1" />
-              <input type="hidden" name="audience" value={audience} />
-              {favoritesOnly ? <input type="hidden" name="favorites" value="1" /> : null}
-              <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto_auto] sm:items-end">
-                <div>
-                  <label className="mb-2 block text-sm font-medium" htmlFor="q">
-                    Search by title
-                  </label>
-                  <Input
-                    id="q"
-                    name="q"
-                    defaultValue={q}
-                    placeholder="e.g. Chicken, Soup, Brownie"
-                    className="h-11 bg-background/85"
-                  />
-                </div>
-                <div className="sm:w-56">
-                  <label className="mb-2 block text-sm font-medium" htmlFor="category">
-                    Category
-                  </label>
-                  <select
-                    id="category"
-                    name="category"
-                    defaultValue={activeCategory}
-                    className="h-11 w-full rounded-md border border-input bg-background/80 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <option value="">All</option>
-                    {categories.map((category) => (
-                      <option key={category.name} value={category.name}>
-                        {category.name} ({category.count})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="sm:w-28">
-                  <label className="mb-2 block text-sm font-medium" htmlFor="pageSize">
-                    Per page
-                  </label>
-                  <select
-                    id="pageSize"
-                    name="pageSize"
-                    defaultValue={String(data.pageSize)}
-                    className="h-11 w-full rounded-md border border-input bg-background/80 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <option value="10">10</option>
-                    <option value="50">50</option>
-                    <option value="100">100</option>
-                  </select>
-                </div>
-                <Button type="submit" className="h-11 sm:min-w-28">
-                  Apply
-                </Button>
+      <MotionReveal>
+        <section className="mb-6">
+          <Card className="surface-panel border-white/40 shadow-xl shadow-black/5">
+            <CardHeader className="space-y-5">
+              <div className="space-y-2">
+                <CardTitle className="text-3xl sm:text-4xl">All Recipes</CardTitle>
+                <CardDescription className="max-w-xl text-sm sm:text-base">
+                  {isOwner
+                    ? "Browse recipes and visibility scope. Owners see visibility labels on each recipe."
+                    : "Browse recipes based on your current access."}
+                </CardDescription>
               </div>
-            </form>
-          </CardHeader>
-        </Card>
-      </section>
+
+              <div className="flex flex-wrap gap-2">
+                {canViewPublic && canViewEnterprise ? (
+                  <Link
+                    href={buildRecipesHref({
+                      q,
+                      category: activeCategory,
+                      audience: "all",
+                      favoritesOnly,
+                      page: 1,
+                      pageSize: data.pageSize,
+                    })}
+                    className={buttonVariants({ variant: audience === "all" ? "secondary" : "outline", size: "sm" })}
+                  >
+                    All available ({allCount})
+                  </Link>
+                ) : null}
+
+                {canViewPublic ? (
+                  <Link
+                    href={buildRecipesHref({
+                      q,
+                      category: activeCategory,
+                      audience: "public",
+                      favoritesOnly,
+                      page: 1,
+                      pageSize: data.pageSize,
+                    })}
+                    className={buttonVariants({
+                      variant: audience === "public" ? "secondary" : "outline",
+                      size: "sm",
+                    })}
+                  >
+                    Public ({publicCount})
+                  </Link>
+                ) : null}
+
+                {canViewEnterprise ? (
+                  <Link
+                    href={buildRecipesHref({
+                      q,
+                      category: activeCategory,
+                      audience: "enterprise",
+                      favoritesOnly,
+                      page: 1,
+                      pageSize: data.pageSize,
+                    })}
+                    className={buttonVariants({
+                      variant: audience === "enterprise" ? "secondary" : "outline",
+                      size: "sm",
+                    })}
+                  >
+                    Enterprise ({enterpriseCount})
+                  </Link>
+                ) : null}
+
+                <Link
+                  href={buildRecipesHref({
+                    q,
+                    category: activeCategory,
+                    audience,
+                    favoritesOnly: !favoritesOnly,
+                    page: 1,
+                    pageSize: data.pageSize,
+                  })}
+                  className={buttonVariants({
+                    variant: favoritesOnly ? "secondary" : "outline",
+                    size: "sm",
+                  })}
+                >
+                  {favoritesOnly ? "Favourites (on)" : "Favourites"}
+                </Link>
+              </div>
+
+              <form action="/recipes" method="get" className="space-y-3">
+                <input type="hidden" name="page" value="1" />
+                <input type="hidden" name="audience" value={audience} />
+                {favoritesOnly ? <input type="hidden" name="favorites" value="1" /> : null}
+                <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto_auto] sm:items-end">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium" htmlFor="q">
+                      Search by title
+                    </label>
+                    <Input
+                      id="q"
+                      name="q"
+                      defaultValue={q}
+                      placeholder="e.g. Chicken, Soup, Brownie"
+                      className="h-11 bg-background/85"
+                    />
+                  </div>
+                  <div className="sm:w-56">
+                    <label className="mb-2 block text-sm font-medium" htmlFor="category">
+                      Category
+                    </label>
+                    <select
+                      id="category"
+                      name="category"
+                      defaultValue={activeCategory}
+                      className="h-11 w-full rounded-md border border-input bg-background/80 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <option value="">All</option>
+                      {categories.map((category) => (
+                        <option key={category.name} value={category.name}>
+                          {category.name} ({category.count})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="sm:w-28">
+                    <label className="mb-2 block text-sm font-medium" htmlFor="pageSize">
+                      Per page
+                    </label>
+                    <select
+                      id="pageSize"
+                      name="pageSize"
+                      defaultValue={String(data.pageSize)}
+                      className="h-11 w-full rounded-md border border-input bg-background/80 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <option value="10">10</option>
+                      <option value="50">50</option>
+                      <option value="100">100</option>
+                    </select>
+                  </div>
+                  <Button type="submit" className="h-11 sm:min-w-28">
+                    Apply
+                  </Button>
+                </div>
+              </form>
+            </CardHeader>
+          </Card>
+        </section>
+      </MotionReveal>
 
       {recipes.length === 0 ? (
-        <Card className="surface-panel border-dashed">
-          <CardContent className="py-10 text-center">
-            <p className="text-base font-medium">
-              {favoritesOnly ? "No favourite recipes found." : `No recipes found for: ${q || "your query"}.`}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {favoritesOnly
-                ? "Save recipes with the star icon, then enable Favourites to see them here."
-                : "Try a broader keyword or clear the search."}
-            </p>
-          </CardContent>
-        </Card>
+        <MotionReveal delay={0.06}>
+          <Card className="surface-panel border-dashed">
+            <CardContent className="py-10 text-center">
+              <p className="text-base font-medium">
+                {favoritesOnly ? "No favourite recipes found." : `No recipes found for: ${q || "your query"}.`}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {favoritesOnly
+                  ? "Save recipes with the star icon, then enable Favourites to see them here."
+                  : "Try a broader keyword or clear the search."}
+              </p>
+            </CardContent>
+          </Card>
+        </MotionReveal>
       ) : (
-        <ul className="grid gap-4 md:grid-cols-2">
+        <MotionStaggerList
+          key={listAnimationKey}
+          className="grid gap-4 md:grid-cols-2"
+          delayChildren={0.045}
+        >
           {recipes.map((recipe) => {
             const per100g = recipe.nutrition?.per100g;
             const energyKj = readNumeric(per100g, ["energyKj", "energy_kj", "kj", "kJ"]);
@@ -359,7 +369,7 @@ export default async function RecipesPage({
             const isFavorite = favoriteIds.has(recipe.id);
 
             return (
-              <li key={recipe.id}>
+              <MotionStaggerItem key={recipe.id}>
                 <Card className="group relative h-full overflow-hidden border-border/70 transition duration-200 hover:-translate-y-1 hover:shadow-lg">
                   <form action={setRecipeFavoriteAction} className="absolute right-6 top-6 z-10">
                     <input type="hidden" name="recipeId" value={recipe.id} />
@@ -421,10 +431,10 @@ export default async function RecipesPage({
                     </div>
                   </CardContent>
                 </Card>
-              </li>
+              </MotionStaggerItem>
             );
           })}
-        </ul>
+        </MotionStaggerList>
       )}
 
       <div className="mt-4 flex items-center justify-between gap-3">

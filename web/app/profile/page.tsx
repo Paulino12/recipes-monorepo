@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { MotionReveal } from "@/components/motion/reveal";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import { Input } from "@/components/ui/input";
 import { isStripeConfigured } from "@/lib/api/stripe";
 import { getServerAccessSession } from "@/lib/api/serverSession";
@@ -51,7 +53,8 @@ export default async function ProfilePage({
 
   return (
     <main className="mx-auto max-w-6xl px-4 pb-16 pt-8 sm:px-6">
-      <section className="grid gap-4 md:grid-cols-[1.1fr_0.9fr]">
+      <MotionReveal>
+        <section className="grid gap-4 md:grid-cols-[1.1fr_0.9fr]">
         <Card className="surface-panel border-white/40">
           <CardHeader className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -84,13 +87,13 @@ export default async function ProfilePage({
                 <p>Enterprise access: {session.entitlements.can_view_enterprise ? "enabled" : "disabled"}</p>
               </div>
 
-              <Button type="submit">Save profile</Button>
+              <FormSubmitButton pendingText="Saving...">Save profile</FormSubmitButton>
             </form>
 
             <form action={sendPasswordResetAction}>
-              <Button type="submit" variant="outline">
+              <FormSubmitButton type="submit" variant="outline" pendingText="Sending...">
                 Send password reset email
-              </Button>
+              </FormSubmitButton>
             </form>
 
             {success ? (
@@ -105,7 +108,8 @@ export default async function ProfilePage({
         </Card>
 
         {isOwner ? (
-          <Card className="surface-panel border-white/40">
+          <MotionReveal delay={0.08}>
+            <Card className="surface-panel border-white/40">
             <CardHeader className="space-y-3">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="secondary">Owner Access</Badge>
@@ -126,9 +130,11 @@ export default async function ProfilePage({
                 Go to recipes
               </Link>
             </CardContent>
-          </Card>
+            </Card>
+          </MotionReveal>
         ) : (
-          <Card className="surface-panel border-white/40">
+          <MotionReveal delay={0.08}>
+            <Card className="surface-panel border-white/40">
             <CardHeader className="space-y-3">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="secondary">Billing</Badge>
@@ -153,12 +159,14 @@ export default async function ProfilePage({
               ) : (
                 <div className="flex flex-wrap gap-2">
                   <form action={startStripeCheckoutFromProfileAction}>
-                    <Button type="submit">Start subscription</Button>
+                    <FormSubmitButton pendingText="Redirecting...">
+                      Start subscription
+                    </FormSubmitButton>
                   </form>
                   <form action={openStripePortalFromProfileAction}>
-                    <Button type="submit" variant="outline">
+                    <FormSubmitButton variant="outline" pendingText="Opening...">
                       Manage billing
-                    </Button>
+                    </FormSubmitButton>
                   </form>
                 </div>
               )}
@@ -167,9 +175,11 @@ export default async function ProfilePage({
                 Go to recipes
               </Link>
             </CardContent>
-          </Card>
+            </Card>
+          </MotionReveal>
         )}
-      </section>
+        </section>
+      </MotionReveal>
     </main>
   );
 }

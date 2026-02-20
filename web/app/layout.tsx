@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
+import { RouteLoadingIndicator } from "@/components/route-loading-indicator";
 import { SiteHeader } from "@/components/site-header";
 import { getServerAccessSession } from "@/lib/api/serverSession";
 
@@ -42,6 +43,7 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
       >
         <div className="min-h-screen">
+          <RouteLoadingIndicator />
           <SiteHeader session={headerSession} />
 
           {children}
